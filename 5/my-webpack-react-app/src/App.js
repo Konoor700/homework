@@ -1,44 +1,35 @@
-import { useState } from 'react';
-import './styles.css';
-
-
-const Counter = ({ initialValue = 0, label }) => {
-  const [count, setCount] = useState(initialValue);
-
-  const increment = () => setCount(prev => prev + 1);
-  const decrement = () => setCount(prev => prev - 1);
-
-  return (
-    <div className="counter">
-      <h3>{label}</h3>
-      <p>Значення: <strong>{count}</strong></p>
-      <button onClick={decrement}>-</button>
-      <button onClick={increment}>+</button>
-    </div>
-  );
-};
-
-
-const Wrapper = ({ title, children }) => {
-  return (
-    <div className="wrapper">
-      <h1>{title}</h1>
-      
-      <section className="children-container">
-        {children}
-      </section>
-    </div>
-  );
-};
-
+import React, { useState, useMemo } from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Layout from './components/Layout';
 
 const App = () => {
+  const [mode, setMode] = useState('light'); 
+
+  
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode, 
+        },
+      }),
+    [mode],
+  );
+
+  const toggleTheme = () => {
+    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+  };
+
   return (
-    <Wrapper title="Домашнє завдання: React + Webpack">
-      
-      <Counter initialValue={0} label="Лічильник А" />
-      <Counter initialValue={10} label="Лічильник Б (start: 10)" />
-    </Wrapper>
+    <ThemeProvider theme={theme}>
+      <CssBaseline /> 
+      <BrowserRouter>
+        
+        <Layout toggleTheme={toggleTheme} mode={mode} />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 };
 
