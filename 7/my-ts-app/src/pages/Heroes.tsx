@@ -5,7 +5,7 @@ import { Box, Card, CardContent, CardMedia, Typography, LinearProgress } from '@
 import { useNavigate, Routes, Route, useParams } from 'react-router-dom';
 import { Hero, ApiResponse } from '../types/hero';
 
-// --- Підкомпонент Detail ---
+
 
 interface HeroDetailProps {
   heroes: Hero[];
@@ -31,12 +31,12 @@ const HeroDetail: React.FC<HeroDetailProps> = ({ heroes }) => {
   );
 };
 
-// --- Обгортка для лоадера (ВИПРАВЛЕННЯ ПОМИЛКИ TS) ---
+
 const CustomLinearProgress = () => {
   return <LinearProgress />;
 };
 
-// --- Основний компонент ---
+
 
 const Heroes: React.FC = () => {
   const [rows, setRows] = useState<Hero[]>([]);
@@ -90,7 +90,7 @@ const Heroes: React.FC = () => {
           pageSizeOptions={[20]}
           
           onRowClick={handleRowClick}
-          // Тут ми використовуємо нашу обгортку замість прямого LinearProgress
+          
           slots={{ loadingOverlay: CustomLinearProgress }}
           sx={{
             '& .MuiDataGrid-row:hover': {
