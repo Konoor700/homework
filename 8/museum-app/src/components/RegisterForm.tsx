@@ -1,92 +1,98 @@
-import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom'; 
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { registerUser } from '../store/slices/userSlice';
 import type { AppDispatch, RootState } from '../store/store';
 
 const RegisterForm = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  
   const { loading, error } = useSelector((state: RootState) => state.user);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      
-      await dispatch(registerUser({ username, password })).unwrap();
-      navigate('/'); 
-    } catch (error) {
-      console.error('Registration failed:', error);
-    }
-  };
+  
+  const validationSchema = Yup.object({
+    username: Yup.string()
+      .min(3, 'Логін має бути мінімум 3 символи')
+      .required("Придумайте ім'я користувача"),
+    password: Yup.string()
+      .min(6, 'Пароль має бути мінімум 6 символів')
+      .required('Придумайте пароль'),
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      username: '',
+      password: '',
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      try {
+        await dispatch(registerUser(values)).unwrap();
+        navigate('/'); 
+      } catch (err) {
+        console.error('Registration failed:', err);
+      }
+    },
+  });
 
   return (
-    
     <div className="flex items-center justify-center min-h-[80vh] bg-gray-50 px-4">
-      
-      
       <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-        
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
           Створити акаунт
         </h2>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={formik.handleSubmit} className="space-y-6">
           
-          
+         
           <div>
-            <label 
-              htmlFor="username" 
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
               Ім'я користувача
             </label>
             <input
               id="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
+              {...formik.getFieldProps('username')}
               placeholder="Придумайте логін"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
+                ${formik.touched.username && formik.errors.username 
+                  ? 'border-red-500 focus:ring-red-200' 
+                  : 'border-gray-300 focus:ring-green-500 focus:border-transparent'}`}
             />
+            {formik.touched.username && formik.errors.username && (
+              <p className="mt-1 text-xs text-red-500">{formik.errors.username}</p>
+            )}
           </div>
 
           
           <div>
-            <label 
-              htmlFor="password" 
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Пароль
             </label>
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              {...formik.getFieldProps('password')}
               placeholder="Придумайте пароль"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
+                ${formik.touched.password && formik.errors.password 
+                  ? 'border-red-500 focus:ring-red-200' 
+                  : 'border-gray-300 focus:ring-green-500 focus:border-transparent'}`}
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Пароль має бути надійним
-            </p>
+            {formik.touched.password && formik.errors.password ? (
+              <p className="mt-1 text-xs text-red-500">{formik.errors.password}</p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-500">Пароль має бути надійним (мін. 6 символів)</p>
+            )}
           </div>
 
-         
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded text-sm text-red-700">
               <p>{error}</p>
             </div>
           )}
 
-          
           <button 
             type="submit" 
             disabled={loading}
@@ -110,7 +116,6 @@ const RegisterForm = () => {
           </button>
         </form>
 
-        
         <p className="mt-8 text-center text-sm text-gray-600">
           Вже є акаунт?{' '}
           <Link 

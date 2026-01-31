@@ -1,78 +1,92 @@
-import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom'; 
+import { useNavigate, Link } from 'react-router-dom';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { loginUser } from '../store/slices/userSlice';
 import type { AppDispatch, RootState } from '../store/store';
 
 const LoginForm = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  
   const { loading, error } = useSelector((state: RootState) => state.user);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); 
-    
-    try {
-      await dispatch(loginUser({ username, password })).unwrap();
-      navigate('/');
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
+  
+  const validationSchema = Yup.object({
+    username: Yup.string()
+      .required("Введіть ім'я користувача"),
+    password: Yup.string()
+      .required('Введіть пароль'),
+  });
+
+  
+  const formik = useFormik({
+    initialValues: {
+      username: '',
+      password: '',
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      try {
+        await dispatch(loginUser({ 
+          username: values.username, 
+          password: values.password 
+        })).unwrap();
+        navigate('/');
+      } catch (err) {
+        console.error('Login failed:', err);
+      }
+    },
+  });
 
   return (
-   
     <div className="flex items-center justify-center min-h-[80vh] bg-gray-50 px-4">
-      
-      
       <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-        
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
           Вхід у систему
         </h2>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={formik.handleSubmit} className="space-y-6">
           
           
           <div>
-            <label 
-              htmlFor="username" 
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
               Ім'я користувача
             </label>
             <input
               id="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
+              
+              {...formik.getFieldProps('username')}
               placeholder="Введіть ваш логін"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
+                ${formik.touched.username && formik.errors.username 
+                  ? 'border-red-500 focus:ring-red-200' 
+                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'}`}
             />
+            
+            {formik.touched.username && formik.errors.username && (
+              <p className="mt-1 text-xs text-red-500">{formik.errors.username}</p>
+            )}
           </div>
 
-          
+         
           <div>
-            <label 
-              htmlFor="password" 
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Пароль
             </label>
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              {...formik.getFieldProps('password')}
               placeholder="••••••••"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
+                ${formik.touched.password && formik.errors.password 
+                  ? 'border-red-500 focus:ring-red-200' 
+                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'}`}
             />
+            {formik.touched.password && formik.errors.password && (
+              <p className="mt-1 text-xs text-red-500">{formik.errors.password}</p>
+            )}
           </div>
 
           
@@ -82,7 +96,6 @@ const LoginForm = () => {
             </div>
           )}
 
-          
           <button 
             type="submit" 
             disabled={loading}
@@ -106,7 +119,6 @@ const LoginForm = () => {
           </button>
         </form>
 
-        
         <p className="mt-8 text-center text-sm text-gray-600">
           Немає акаунту?{' '}
           <Link 

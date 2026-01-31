@@ -1,52 +1,63 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { createExhibit } from '../store/api/exhibitActions';
 import ControlBar from '../components/ControlBar';
 
 const NewPost = () => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  
+  const [serverError, setServerError] = useState('');
   const navigate = useNavigate();
 
+  
+  const validationSchema = Yup.object({
+    title: Yup.string().required("Заголовок обов'язковий"),
+    description: Yup.string().required("Опис обов'язковий"),
+    image: Yup.mixed().required("Зображення обов'язкове"),
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      title: '',
+      description: '',
+      image: null as File | null,
+    },
+    validationSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      if (!values.image) return; 
+
+      setServerError('');
+      try {
+        await createExhibit({
+          title: values.title,
+          description: values.description,
+          image: values.image,
+        });
+        navigate('/home');
+      } catch (err: any) {
+        console.error('Failed to create exhibit:', err);
+        setServerError(err.response?.data?.message || 'Не вдалося створити пост');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
+
+ 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedFile(file);
+      
+      formik.setFieldValue('image', file);
+      
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!title.trim() || !description.trim() || !selectedFile) {
-      setError('Всі поля (назва, опис, зображення) є обов\'язковими');
-      return;
-    }
-
-    setSubmitting(true);
-    setError('');
-
-    try {
-      await createExhibit({
-        title,
-        description,
-        image: selectedFile
-      });
-
-      navigate('/home');
-    } catch (err: any) {
-      console.error('Failed to create exhibit:', err);
-      setError(err.response?.data?.message || 'Не вдалося створити пост. Перевірте формат файлу.');
-    } finally {
-      setSubmitting(false);
-    }
+  const handleClearFile = () => {
+    setPreviewUrl(null);
+    formik.setFieldValue('image', null);
   };
 
   return (
@@ -60,7 +71,7 @@ const NewPost = () => {
             Створити новий пост
           </h1>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
             
             
             <div>
@@ -69,27 +80,35 @@ const NewPost = () => {
               </label>
               <input
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                {...formik.getFieldProps('title')}
                 placeholder="Введіть влучний заголовок..."
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
+                  ${formik.touched.title && formik.errors.title
+                    ? 'border-red-500 focus:ring-red-200'
+                    : 'border-gray-300 focus:ring-green-500 focus:border-transparent'}`}
               />
+              {formik.touched.title && formik.errors.title && (
+                <p className="mt-1 text-xs text-red-500">{formik.errors.title}</p>
+              )}
             </div>
 
-            
+           
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Опис посту
               </label>
               <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                {...formik.getFieldProps('description')}
                 placeholder="Розкажіть історію цього експонату..."
-                required
                 rows={5}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 resize-y"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 resize-y
+                  ${formik.touched.description && formik.errors.description
+                    ? 'border-red-500 focus:ring-red-200'
+                    : 'border-gray-300 focus:ring-green-500 focus:border-transparent'}`}
               />
+               {formik.touched.description && formik.errors.description && (
+                <p className="mt-1 text-xs text-red-500">{formik.errors.description}</p>
+              )}
             </div>
 
             
@@ -98,7 +117,9 @@ const NewPost = () => {
                 Зображення
               </label>
               
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:bg-gray-50 transition-colors">
+              <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg hover:bg-gray-50 transition-colors
+                 ${formik.touched.image && formik.errors.image ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}>
+                
                 <div className="space-y-1 text-center">
                   {!previewUrl ? (
                     <>
@@ -110,12 +131,12 @@ const NewPost = () => {
                           <span>Завантажити файл</span>
                           <input 
                             id="file-upload" 
-                            name="file-upload" 
+                            name="image"
                             type="file" 
                             className="sr-only" 
                             accept="image/*"
                             onChange={handleFileChange}
-                            required
+                            onBlur={formik.handleBlur} 
                           />
                         </label>
                         <p className="pl-1">або перетягніть сюди</p>
@@ -131,10 +152,7 @@ const NewPost = () => {
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          setPreviewUrl(null);
-                          setSelectedFile(null);
-                        }}
+                        onClick={handleClearFile}
                         className="mt-4 text-sm text-red-600 hover:text-red-800 font-medium underline"
                       >
                         Видалити та вибрати інше
@@ -143,12 +161,15 @@ const NewPost = () => {
                   )}
                 </div>
               </div>
+              {formik.touched.image && formik.errors.image && (
+                <p className="mt-1 text-xs text-red-500">{formik.errors.image}</p>
+              )}
             </div>
 
             
-            {error && (
+            {serverError && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded text-sm text-red-700 animate-pulse">
-                <p>{error}</p>
+                <p>{serverError}</p>
               </div>
             )}
 
@@ -156,14 +177,14 @@ const NewPost = () => {
             <div className="flex gap-4 pt-4">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={formik.isSubmitting}
                 className={`flex-1 py-3 px-6 text-white font-semibold rounded-lg shadow-md transition-all duration-200
-                  ${submitting 
+                  ${formik.isSubmitting 
                     ? 'bg-green-400 cursor-not-allowed' 
                     : 'bg-green-600 hover:bg-green-700 hover:shadow-lg active:scale-[0.98]'
                   }`}
               >
-                {submitting ? 'Публікуємо...' : 'Опублікувати пост'}
+                {formik.isSubmitting ? 'Публікуємо...' : 'Опублікувати пост'}
               </button>
 
               <button
