@@ -1,103 +1,91 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { store } from './store/store';
-import { setNavigate } from './store/api/axiosInstance';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { loginSuccess } from './store/slices/userSlice';
+import type { AppDispatch } from './store/store';
 
 
-import StripePage from './layout/StripePage';
+import { socket } from './store/api/socket';
+
 import HomePage from './layout/HomePage';
 import LoginPage from './layout/LoginPage';
 import RegisterPage from './layout/RegisterPage';
+import StripePage from './layout/StripePage';
 import NewPost from './layout/NewPost';
-
-
 import ProtectedRoute from './components/ProtectedRoute';
 
-
-function NavigationSetup() {
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    
-    setNavigate(navigate);
-  }, [navigate]);
-  
-  return null;
-}
-
 function App() {
-  return (
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+  
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
     
-    <Provider store={store}>
-      <BrowserRouter>
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        dispatch(loginSuccess({ user, token }));
+      } catch (e) {
+        console.error("Failed to parse user from storage", e);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+
+  
+
+    
+    socket.on('connect', () => {
+      console.log('🟢 WebSocket connected! ID:', socket.id);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('🔴 WebSocket connection error:', err);
+    });
+
+   
+    socket.on('notification', (data: any) => {
+      console.log('🔔 Отримано сповіщення:', data);
+      alert(`Нове сповіщення: ${JSON.stringify(data)}`);
+    });
+
+    
+    return () => {
+      socket.off('connect');
+      socket.off('notification');
+      socket.off('connect_error');
       
-        <NavigationSetup />
+    };
+
+  }, [dispatch]);
+
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<StripePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         
+        <Route 
+          path="/home" 
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          } 
+        />
         
-        <div style={{ 
-          minHeight: '100vh', 
-          backgroundColor: '#f5f5f5',
-          fontFamily: 'Arial, sans-serif'
-        }}>
-          <Routes>
-            
-            <Route path="/" element={<StripePage />} />
-
-            
-            <Route 
-              path="/login" 
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <LoginPage />
-                </ProtectedRoute>
-              } 
-            />
-
-           
-            <Route 
-              path="/register" 
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <RegisterPage />
-                </ProtectedRoute>
-              } 
-            />
-
-            
-            <Route 
-              path="/home" 
-              element={
-                <ProtectedRoute requireAuth={true}>
-                  <HomePage />
-                </ProtectedRoute>
-              } 
-            />
-
-            
-            <Route 
-              path="/new-post" 
-              element={
-                <ProtectedRoute requireAuth={true}>
-                  <NewPost />
-                </ProtectedRoute>
-              } 
-            />
-
-           
-            <Route 
-              path="*" 
-              element={
-                <div style={{ textAlign: 'center', marginTop: '100px' }}>
-                  <h1>404 - Сторінка не знайдена</h1>
-                  <a href="/">Повернутися на головну</a>
-                </div>
-              } 
-            />
-          </Routes>
-        </div>
-      </BrowserRouter>
-    </Provider>
+        <Route 
+          path="/new-post" 
+          element={
+            <ProtectedRoute>
+              <NewPost />
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
+    </Router>
   );
 }
 

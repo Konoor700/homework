@@ -16,7 +16,6 @@ interface UserState {
   error: string | null;
 }
 
-
 const storedToken = localStorage.getItem('token');
 const isValidToken = storedToken && storedToken !== 'undefined' && storedToken !== 'null';
 
@@ -27,8 +26,6 @@ const initialState: UserState = {
   loading: false,
   error: null,
 };
-
-
 
 export const loginUser = createAsyncThunk(
   'user/login',
@@ -54,17 +51,26 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-
-
 const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
+  
+    loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
+      state.loading = false;
+      state.isAuthenticated = true;
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.error = null;
+    },
+    
+
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       console.log('User logged out, token removed.');
     },
     clearError: (state) => {
@@ -72,22 +78,17 @@ const userSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-  
     builder
+      
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        
-       
         console.log('Login Payload from Server:', action.payload);
 
-        
         const token = action.payload.access_token || action.payload.token;
-
-        
         const userObj: User = {
             id: action.payload.userId || action.payload.user?.id || '0',
             username: action.payload.userName || action.payload.user?.username || 'User',
@@ -100,6 +101,8 @@ const userSlice = createSlice({
           state.isAuthenticated = true;
           
           localStorage.setItem('token', token);
+          
+          localStorage.setItem('user', JSON.stringify(userObj)); 
           console.log('SUCCESS: Token saved:', token);
         } else {
           console.error('ERROR: access_token not found in response!', action.payload);
@@ -109,10 +112,9 @@ const userSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      });
+      })
 
-  
-    builder
+      
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -121,7 +123,6 @@ const userSlice = createSlice({
         state.loading = false;
         console.log('Register Payload:', action.payload);
 
-        
         const token = action.payload.access_token || action.payload.token;
 
         if (token) {
@@ -129,11 +130,12 @@ const userSlice = createSlice({
           state.isAuthenticated = true;
           localStorage.setItem('token', token);
           
-          
-           state.user = {
+          const userObj = {
             id: action.payload.userId || '0',
             username: action.payload.userName || 'User',
           };
+          state.user = userObj;
+          localStorage.setItem('user', JSON.stringify(userObj));
         }
       })
       .addCase(registerUser.rejected, (state, action) => {
@@ -143,5 +145,6 @@ const userSlice = createSlice({
   },
 });
 
-export const { logout, clearError } = userSlice.actions;
+
+export const { loginSuccess, logout, clearError } = userSlice.actions;
 export default userSlice.reducer;
