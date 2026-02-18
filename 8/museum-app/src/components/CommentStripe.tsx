@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; 
 import { useSelector } from 'react-redux';
 import { getComments, addComment, deleteComment } from '../store/api/commentActions';
 import type { Comment as CommentType } from '../store/api/commentActions';
@@ -17,24 +17,35 @@ const CommentStripe = ({ exhibitId }: CommentStripeProps) => {
   
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
 
-  
-  useEffect(() => {
-    loadComments();
-  }, [exhibitId]);
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
+   
       const data = await getComments(exhibitId);
       setComments(data);
-    } catch (error) {
-      console.error('Failed to load comments:', error);
+    } catch (error: any) {
+      if (error.name !== 'CanceledError') {
+        console.error('Failed to load comments:', error);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
-  };
+  }, [exhibitId]);
 
-  
+
+  useEffect(() => {
+    const controller = new AbortController();
+    
+    loadComments(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadComments]); 
+
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -42,7 +53,6 @@ const CommentStripe = ({ exhibitId }: CommentStripeProps) => {
       return;
     }
 
-    
     if (newCommentText.length > 2000) {
       alert('Коментар занадто довгий (максимум 2000 символів)');
       return;
@@ -51,6 +61,7 @@ const CommentStripe = ({ exhibitId }: CommentStripeProps) => {
     setSubmitting(true);
     try {
       const newComment = await addComment(exhibitId, newCommentText);
+      
       setComments([newComment, ...comments]); 
       setNewCommentText('');
     } catch (error) {
@@ -61,7 +72,6 @@ const CommentStripe = ({ exhibitId }: CommentStripeProps) => {
     }
   };
 
-  
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm('Ви впевнені, що хочете видалити цей коментар?')) {
       return;
@@ -80,7 +90,6 @@ const CommentStripe = ({ exhibitId }: CommentStripeProps) => {
     <div>
       <h4>Коментарі ({comments.length})</h4>
 
-     
       {isAuthenticated && (
         <form onSubmit={handleAddComment} style={{ marginBottom: '20px' }}>
           <textarea
@@ -124,14 +133,12 @@ const CommentStripe = ({ exhibitId }: CommentStripeProps) => {
         </form>
       )}
 
-      
       {!isAuthenticated && (
         <p style={{ color: '#999', fontStyle: 'italic', marginBottom: '20px' }}>
           Увійдіть, щоб залишити коментар
         </p>
       )}
 
-     
       {loading ? (
         <p>Завантаження коментарів...</p>
       ) : comments.length === 0 ? (

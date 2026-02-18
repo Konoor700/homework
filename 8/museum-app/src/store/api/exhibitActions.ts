@@ -18,10 +18,17 @@ interface ExhibitsResponse {
 }
 
 
-export const getAllExhibits = async (page: number = 1, limit: number = 10): Promise<{ exhibits: Exhibit[], total: number }> => {
+export const getAllExhibits = async (
+  page: number = 1, 
+  limit: number = 10, 
+  signal?: AbortSignal
+): Promise<{ exhibits: Exhibit[], total: number }> => {
   try {
-    const response = await axiosInstance.get<ExhibitsResponse>(`/exhibits?page=${page}&limit=${limit}`);
-    
+   
+    const response = await axiosInstance.get<ExhibitsResponse>(
+      `/exhibits?page=${page}&limit=${limit}`, 
+      { signal }
+    );
     
     return {
       exhibits: response.data.data, 
@@ -33,9 +40,16 @@ export const getAllExhibits = async (page: number = 1, limit: number = 10): Prom
 };
 
 
-export const getMyExhibits = async (page: number = 1, limit: number = 10): Promise<{ exhibits: Exhibit[], total: number }> => {
+export const getMyExhibits = async (
+  page: number = 1, 
+  limit: number = 10,
+  signal?: AbortSignal
+): Promise<{ exhibits: Exhibit[], total: number }> => {
   try {
-    const response = await axiosInstance.get<ExhibitsResponse>(`/exhibits/my-posts?page=${page}&limit=${limit}`);
+    const response = await axiosInstance.get<ExhibitsResponse>(
+      `/exhibits/my-posts?page=${page}&limit=${limit}`,
+      { signal }
+    );
     return {
       exhibits: response.data.data,
       total: response.data.total
@@ -53,7 +67,6 @@ export const getExhibitById = async (id: string): Promise<Exhibit> => {
     throw error;
   }
 };
-
 
 export const createExhibit = async (data: { title: string; description: string; image: File }): Promise<Exhibit> => {
   try {

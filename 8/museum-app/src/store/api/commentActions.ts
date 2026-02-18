@@ -9,17 +9,18 @@ export interface Comment {
 }
 
 
-export const getComments = async (exhibitId: string): Promise<Comment[]> => {
+export const getComments = async (exhibitId: string, signal?: AbortSignal): Promise<Comment[]> => {
   try {
-    const response = await axiosInstance.get(`/exhibits/${exhibitId}/comments`);
+    
+    const response = await axiosInstance.get(`/exhibits/${exhibitId}/comments`, {
+      signal
+    });
     return response.data;
   } catch (error) {
-    console.error("GET comments error", error);
-    
-    return []; 
+   
+    throw error; 
   }
 };
-
 
 export const addComment = async (exhibitId: string, text: string): Promise<Comment> => {
   try {
@@ -32,12 +33,9 @@ export const addComment = async (exhibitId: string, text: string): Promise<Comme
   }
 };
 
-
 export const deleteComment = async (commentId: string): Promise<void> => {
   try {
-    
     await axiosInstance.delete(`/comments/${commentId}`);
-
   } catch (error) {
     throw error;
   }

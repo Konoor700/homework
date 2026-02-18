@@ -1,16 +1,32 @@
+import { useEffect, useRef } from 'react'; 
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom'; 
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { registerUser } from '../store/slices/userSlice';
+import { registerUser, loginUser, clearError } from '../store/slices/userSlice'; 
 import type { AppDispatch, RootState } from '../store/store';
 
 const RegisterForm = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.user);
-
   
+  
+  const promiseRef = useRef<any>(null);
+
+  useEffect(() => {
+   
+    dispatch(clearError());
+    
+    return () => {
+      
+      if (promiseRef.current) {
+        promiseRef.current.abort();
+      }
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
   const validationSchema = Yup.object({
     username: Yup.string()
       .min(3, 'Логін має бути мінімум 3 символи')
@@ -28,10 +44,26 @@ const RegisterForm = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        await dispatch(registerUser(values)).unwrap();
+        
+        const regPromise = dispatch(registerUser(values));
+        promiseRef.current = regPromise;
+        await regPromise.unwrap();
+        
+        
+        const loginPromise = dispatch(loginUser({ 
+          username: values.username, 
+          password: values.password 
+        }));
+        promiseRef.current = loginPromise;
+        await loginPromise.unwrap();
+        
+       
         navigate('/'); 
-      } catch (err) {
-        console.error('Registration failed:', err);
+      } catch (err: any) {
+        
+        if (err.name !== 'AbortError') {
+            console.error('Registration/Login process failed:', err);
+        }
       }
     },
   });
@@ -44,7 +76,6 @@ const RegisterForm = () => {
         </h2>
         
         <form onSubmit={formik.handleSubmit} className="space-y-6">
-          
          
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
@@ -87,12 +118,14 @@ const RegisterForm = () => {
             )}
           </div>
 
+         
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded text-sm text-red-700">
               <p>{error}</p>
             </div>
           )}
 
+          
           <button 
             type="submit" 
             disabled={loading}
@@ -108,7 +141,7 @@ const RegisterForm = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Реєстрація...
+                Обробка...
               </span>
             ) : (
               'Зареєструватися'

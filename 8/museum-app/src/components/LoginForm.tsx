@@ -1,24 +1,36 @@
+import { useEffect, useRef } from 'react'; // ✅ Додали хуки
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { loginUser } from '../store/slices/userSlice';
+import { loginUser, clearError } from '../store/slices/userSlice'; 
 import type { AppDispatch, RootState } from '../store/store';
 
 const LoginForm = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.user);
-
   
+
+  const promiseRef = useRef<any>(null);
+
+
+  useEffect(() => {
+    dispatch(clearError());
+
+    return () => {
+      if (promiseRef.current) {
+        promiseRef.current.abort(); 
+      }
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
   const validationSchema = Yup.object({
-    username: Yup.string()
-      .required("Введіть ім'я користувача"),
-    password: Yup.string()
-      .required('Введіть пароль'),
+    username: Yup.string().required("Введіть ім'я користувача"),
+    password: Yup.string().required('Введіть пароль'),
   });
 
-  
   const formik = useFormik({
     initialValues: {
       username: '',
@@ -27,13 +39,21 @@ const LoginForm = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        await dispatch(loginUser({ 
+       
+        const promise = dispatch(loginUser({ 
           username: values.username, 
           password: values.password 
-        })).unwrap();
+        }));
+        
+        promiseRef.current = promise;
+
+        await promise.unwrap();
         navigate('/');
-      } catch (err) {
-        console.error('Login failed:', err);
+      } catch (err: any) {
+       
+        if (err.name !== 'AbortError') {
+             console.error('Login failed:', err);
+        }
       }
     },
   });
@@ -47,7 +67,6 @@ const LoginForm = () => {
         
         <form onSubmit={formik.handleSubmit} className="space-y-6">
           
-          
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
               Ім'я користувача
@@ -55,7 +74,6 @@ const LoginForm = () => {
             <input
               id="username"
               type="text"
-              
               {...formik.getFieldProps('username')}
               placeholder="Введіть ваш логін"
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200
@@ -63,13 +81,11 @@ const LoginForm = () => {
                   ? 'border-red-500 focus:ring-red-200' 
                   : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'}`}
             />
-            
             {formik.touched.username && formik.errors.username && (
               <p className="mt-1 text-xs text-red-500">{formik.errors.username}</p>
             )}
           </div>
 
-         
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Пароль

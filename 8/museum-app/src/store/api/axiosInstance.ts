@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 let navigateAction: ((path: string) => void) | null = null;
 
 export const setNavigate = (fn: (path: string) => void) => {
@@ -15,16 +16,11 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     
-  
-    console.log('Intercepting request to:', config.url);
-    if (token) {
-      console.log('Token found, attaching to headers.');
+    
+    if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      console.warn('No token found in localStorage!');
     }
     
-
     return config;
   },
   (error) => {
@@ -36,9 +32,11 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    
     if (error.response && error.response.status === 401) {
-      console.error('401 Unauthorized detected. Logging out.');
+     
       localStorage.removeItem('token');
+      
       if (navigateAction) {
         navigateAction('/login');
       }

@@ -1,5 +1,4 @@
 import { useSelector } from 'react-redux';
-
 import type { Comment as CommentType } from '../store/api/commentActions';
 import type { RootState } from '../store/store';
 
@@ -11,55 +10,39 @@ interface CommentProps {
 const Comment = ({ comment, onDelete }: CommentProps) => {
   const { user } = useSelector((state: RootState) => state.user);
   
-  
+
   const isOwner = user?.id === comment.userId;
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('uk-UA') + ' ' + date.toLocaleTimeString('uk-UA');
+    return date.toLocaleDateString('uk-UA') + ' ' + date.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <div style={{ 
-      border: '1px solid #eee',
-      borderRadius: '4px',
-      padding: '12px',
-      marginBottom: '10px',
-      backgroundColor: '#f9f9f9'
-    }}>
+    <div className="border border-gray-100 rounded-lg p-3 mb-3 bg-gray-50 hover:bg-white transition-colors">
       
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '8px'
-      }}>
-        <div>
-          <strong>{comment.username}</strong>
-          <span style={{ color: '#999', fontSize: '12px', marginLeft: '10px' }}>
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex items-center gap-2">
+          <strong className="text-sm text-gray-800">{comment.username}</strong>
+          <span className="text-xs text-gray-400">
             {formatDate(comment.createdAt)}
           </span>
         </div>
         
-        
         {isOwner && (
           <button
             onClick={() => onDelete(comment.id)}
-            style={{
-              padding: '4px 8px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}
+            className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
             title="Видалити коментар"
           >
-            x
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         )}
       </div>
 
-      <div style={{ color: '#333' }}>
+      <div className="text-gray-700 text-sm whitespace-pre-wrap break-words">
         {comment.text}
       </div>
     </div>
